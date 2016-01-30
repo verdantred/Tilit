@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Tilit</string>
+    <string name="action_settings">Settings</string>
+    <string name="newname">Enter a new name</string>
+    <string name="newaccount">Enter a new account</string>
+    <string name="button">Add Entry</string>
+</resources>
