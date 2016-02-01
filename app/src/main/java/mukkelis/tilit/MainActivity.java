@@ -8,24 +8,56 @@ import android.support.v7.widget.Toolbar;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.EditText;
+import android.widget.ListView;
+import android.widget.TextView;
+
+import mukkelis.tilit.AccountInfo;
+
+import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
+
+    private ArrayList<AccountInfo> items;
+    private ArrayAdapter<AccountInfo> itemsAdapter;
+    private ListView lvItems;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
+        // ADD HERE
+        lvItems = (ListView) findViewById(R.id.lvItems);
+        items = new ArrayList<>();
+        itemsAdapter = new ArrayAdapter<AccountInfo>(this, android.R.layout.simple_list_item_2, android.R.id.text1, items) {
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+            public View getView(int position, View convertView, ViewGroup parent) {
+                View view = super.getView(position, convertView, parent);
+                TextView text1 = (TextView) view.findViewById(android.R.id.text1);
+                TextView text2 = (TextView) view.findViewById(android.R.id.text2);
+
+                text1.setText(items.get(position).name);
+                text2.setText(items.get(position).account_num);
+                return view;
             }
-        });
+        };
+        lvItems.setAdapter(itemsAdapter);
+        items.add(new AccountInfo("Erkki", "29989279872"));
+        items.add(new AccountInfo("Jarppi", "98348322784"));
+
+    }
+
+    public void onAddItem(View v) {
+        EditText etNewName = (EditText) findViewById(R.id.etNewName);
+        EditText etNewAccount = (EditText) findViewById(R.id.etNewAccount);
+        String nameText = etNewName.getText().toString();
+        String accountText = etNewAccount.getText().toString();
+        etNewName.setText("");
+        etNewAccount.setText("");
+        itemsAdapter.add(new AccountInfo(nameText, accountText));
     }
 
     @Override
