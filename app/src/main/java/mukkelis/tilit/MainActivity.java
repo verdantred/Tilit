@@ -1,16 +1,23 @@
+// TIlit-application main logic resides here
+
 package mukkelis.tilit;
 
+import android.content.ClipData;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.content.ClipboardManager;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.ContextMenu;
+import android.view.MenuInflater;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -26,14 +33,18 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 
+// The whole application runs in one activity
 public class MainActivity extends AppCompatActivity {
 
-    private ArrayList<AccountInfo> items;
-    private ArrayAdapter<AccountInfo> itemsAdapter;
-    private ListView lvItems;
-    private EditText editName;
-    private EditText editAccount;
+    private ArrayList<AccountInfo> items;           // The AccountInfo items that populate the list
+    private ArrayAdapter<AccountInfo> itemsAdapter; // Adapter that operates the listView
+    private ListView lvItems;                       // The list of accounts UI element
+    private EditText editName;                      // UI element for a new account name
+    private EditText editAccount;                   // UI element for a new account number
+    private IBANCheckDigit checker;                 /* This checks if the given account number is
+                                                     IBAN valid */
 
+    // Checks the new account name field for editing and checks if it is empty
     private TextWatcher nameWatcher = new TextWatcher() {
 
         public void afterTextChanged(Editable s) {
@@ -48,6 +59,7 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+    // Same thing but for the account number, here the validity of the number string is also checked
     private TextWatcher accountWatcher = new TextWatcher() {
 
         public void afterTextChanged(Editable s) {
@@ -72,12 +84,14 @@ public class MainActivity extends AppCompatActivity {
         // ADD HERE
         editName = (EditText) findViewById(R.id.etNewName);
         editAccount = (EditText) findViewById(R.id.etNewAccount);
+        checker = new IBANCheckDigit();
         editName.addTextChangedListener(nameWatcher);
         editAccount.addTextChangedListener(accountWatcher);
         Button b = (Button) findViewById(R.id.btnAddItem);
         b.setEnabled(false);
 
         lvItems = (ListView) findViewById(R.id.lvItems);
+        registerForContextMenu(lvItems);
         readItems();
         itemsAdapter = new ArrayAdapter<AccountInfo>(this, android.R.layout.simple_list_item_2, android.R.id.text1, items) {
 
@@ -94,6 +108,29 @@ public class MainActivity extends AppCompatActivity {
         };
         lvItems.setAdapter(itemsAdapter);
 
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle savedInstanceState) {
+        super.onSaveInstanceState(savedInstanceState);
+        // Save UI state changes to the savedInstanceState.
+        // This bundle will be passed to onCreate if the process is
+        // killed and restarted.
+        EditText etNewName = (EditText) findViewById(R.id.etNewName);
+        EditText etNewAccount = (EditText) findViewById(R.id.etNewAccount);
+        savedInstanceState.putString("Name", etNewName.toString());
+        savedInstanceState.putString("Account", etNewAccount.toString());
+    }
+
+    @Override
+    public void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        // Restore UI state from the savedInstanceState.
+        // This bundle has also been passed to onCreate.
+        EditText etNewName = (EditText) findViewById(R.id.etNewName);
+        EditText etNewAccount = (EditText) findViewById(R.id.etNewAccount);
+        etNewName.setText(savedInstanceState.getString("Name"));
+        etNewAccount.setText(savedInstanceState.getString("Account"));
     }
 
     public void onAddItem(View v) {
@@ -129,11 +166,38 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    @Override
+    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
+        super.onCreateContextMenu(menu, v, menuInfo);
+        if (v.getId()==R.id.lvItems) {
+            MenuInflater inflater = getMenuInflater();
+            inflater.inflate(R.menu.menu_list, menu);
+        }
+    }
+
+    @Override
+    public boolean onContextItemSelected(MenuItem item) {
+        AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo) item.getMenuInfo();
+        switch(item.getItemId()) {
+            case R.id.copy:
+                ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                ClipData clip = ClipData.newPlainText("account number", items.get(info.position).account_num);
+                clipboard.setPrimaryClip(clip);
+                return true;
+            case R.id.delete:
+                items.remove(info.position);
+                itemsAdapter.notifyDataSetChanged();
+                return true;
+            default:
+                return super.onContextItemSelected(item);
+        }
+    }
+
     private void readItems() {
         File filesDir = getFilesDir();
         File todoFile = new File(filesDir, "todo.txt");
         try {
-            ArrayList<String> string_items = new ArrayList<String>(FileUtils.readLines(todoFile));
+            ArrayList<String> string_items = new ArrayList<>(FileUtils.readLines(todoFile));
             items = new ArrayList<>();
             for (int i = 0; (i + 1) < string_items.size(); i += 2) {
                 items.add(new AccountInfo(string_items.get(i), string_items.get(i + 1)));
@@ -183,8 +247,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void checkIfValid(Editable s){
         Button b = (Button) findViewById(R.id.btnAddItem);
-        String acco = s.toString();
-        IBANCheckDigit checker = new IBANCheckDigit();
+        String acco = s.toString().trim();
 
         if (checker.isValid(acco)){
             editAccount.setError(null);
@@ -198,6 +261,7 @@ public class MainActivity extends AppCompatActivity {
         /*String restString;
         String checkDigits;
         int countryDigits;
+
 
         long restDigits;
 
