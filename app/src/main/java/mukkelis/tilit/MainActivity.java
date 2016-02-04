@@ -18,8 +18,9 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.validator.routines.checkdigit.IBANCheckDigit;
 
-import mukkelis.tilit.AccountInfo;
+//import mukkelis.tilit.AccountInfo;
 
 import java.io.File;
 import java.io.IOException;
@@ -66,11 +67,15 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
         // ADD HERE
         editName = (EditText) findViewById(R.id.etNewName);
         editAccount = (EditText) findViewById(R.id.etNewAccount);
         editName.addTextChangedListener(nameWatcher);
         editAccount.addTextChangedListener(accountWatcher);
+        Button b = (Button) findViewById(R.id.btnAddItem);
+        b.setEnabled(false);
 
         lvItems = (ListView) findViewById(R.id.lvItems);
         readItems();
@@ -163,18 +168,67 @@ public class MainActivity extends AppCompatActivity {
         if (s1){
             //Name field is empty
             b.setEnabled(false);
-            //Set EditText error
+
+        }
+        else{
+            b.setEnabled(true);
         }
         if (s2){
             //Account number field is empty
             b.setEnabled(false);
-            //Set EditText error
+        }
+        else{
+            b.setEnabled(true);
         }
     }
 
     private void checkIfValid(Editable s){
         Button b = (Button) findViewById(R.id.btnAddItem);
         String acco = s.toString();
-        //Finish the job..
+        IBANCheckDigit checker = new IBANCheckDigit();
+
+        if (checker.isValid(acco)){
+            editAccount.setError(null);
+            b.setEnabled(true);
+        }
+        else{
+            b.setEnabled(false);
+            editAccount.setError("Account number should be in IBAN format");
+        }
+
+        /*String restString;
+        String checkDigits;
+        int countryDigits;
+
+        long restDigits;
+
+        if(acco.length() > 14){
+
+            countryDigits = ((acco.charAt(0) - 55) * 10) + (acco.charAt(1) - 55);
+            checkDigits = Integer.toString(countryDigits) + acco.substring(2, 4);
+            restString = acco.substring(4) + checkDigits;
+            restDigits = Long.parseLong(restString.substring(0, 9)) % 97;
+            int i;
+            for(i = 9; ((i - 9 + 1) * 7) + 9 < restString.length(); i += 7){
+                restDigits = ((restDigits * 10000000) + Long.parseLong(restString.substring(i, i + 7))) % 97;
+            }
+            int j = restString.length() - i;
+            if (j > 0){
+                restDigits = ((restDigits * 10 * j) + Long.parseLong(restString.substring(i))) % 97;
+            }
+            if (restDigits == 1){
+                editAccount.setError(null);
+                b.setEnabled(true);
+            }
+            else{
+                b.setEnabled(false);
+                editAccount.setError("Account number should be in IBAN format");
+            }
+        }
+        else if (acco.length() > 0){
+            b.setEnabled(false);
+            editAccount.setError("Account number should be in IBAN format");
+        }
+        */
     }
 }
