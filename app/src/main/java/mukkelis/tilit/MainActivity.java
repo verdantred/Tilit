@@ -81,18 +81,26 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        // ADD HERE
+
+        // Populate the class variables
         editName = (EditText) findViewById(R.id.etNewName);
         editAccount = (EditText) findViewById(R.id.etNewAccount);
         checker = new IBANCheckDigit();
+
+        // Assign the watchers
         editName.addTextChangedListener(nameWatcher);
         editAccount.addTextChangedListener(accountWatcher);
+
+        // Disable new account button
         Button b = (Button) findViewById(R.id.btnAddItem);
         b.setEnabled(false);
 
         lvItems = (ListView) findViewById(R.id.lvItems);
+        // Setup the context menu for list items
         registerForContextMenu(lvItems);
+        // Read existing items into the list from a file if there are any
         readItems();
+        // Assign an adapter between the list and the UI element ListView
         itemsAdapter = new ArrayAdapter<AccountInfo>(this, android.R.layout.simple_list_item_2, android.R.id.text1, items) {
 
             @Override
@@ -100,6 +108,9 @@ public class MainActivity extends AppCompatActivity {
                 View view = super.getView(position, convertView, parent);
                 TextView text1 = (TextView) view.findViewById(android.R.id.text1);
                 TextView text2 = (TextView) view.findViewById(android.R.id.text2);
+
+                // Define how the mapping is done from the list of names and account numbers to the
+                // simple_list_item_2 layout file.
 
                 text1.setText(items.get(position).name);
                 text2.setText(items.get(position).account_num);
@@ -110,6 +121,7 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    // Saving the EditText fields when app loses focus
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
         super.onSaveInstanceState(savedInstanceState);
@@ -122,6 +134,7 @@ public class MainActivity extends AppCompatActivity {
         savedInstanceState.putString("Account", etNewAccount.toString());
     }
 
+    // Loading the saved texts when app regains focus
     @Override
     public void onRestoreInstanceState(Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
