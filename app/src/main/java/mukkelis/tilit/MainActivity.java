@@ -93,8 +93,6 @@ public class MainActivity extends AppCompatActivity {
             }
         };
         lvItems.setAdapter(itemsAdapter);
-        items.add(new AccountInfo("Erkki", "29989279872"));
-        items.add(new AccountInfo("Jarppi", "98348322784"));
 
     }
 
@@ -135,7 +133,7 @@ public class MainActivity extends AppCompatActivity {
         File filesDir = getFilesDir();
         File todoFile = new File(filesDir, "todo.txt");
         try {
-            ArrayList<String> string_items = new ArrayList<>(FileUtils.readLines(todoFile));
+            ArrayList<String> string_items = new ArrayList<String>(FileUtils.readLines(todoFile));
             items = new ArrayList<>();
             for (int i = 0; (i + 1) < string_items.size(); i += 2) {
                 items.add(new AccountInfo(string_items.get(i), string_items.get(i + 1)));
@@ -176,6 +174,7 @@ public class MainActivity extends AppCompatActivity {
         if (s2){
             //Account number field is empty
             b.setEnabled(false);
+            editAccount.setError(null);
         }
         else{
             b.setEnabled(true);
@@ -191,7 +190,7 @@ public class MainActivity extends AppCompatActivity {
             editAccount.setError(null);
             b.setEnabled(true);
         }
-        else{
+        else if(acco.length() > 0){
             b.setEnabled(false);
             editAccount.setError("Account number should be in IBAN format");
         }
