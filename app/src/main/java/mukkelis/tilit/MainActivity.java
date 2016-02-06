@@ -3,9 +3,11 @@
 package mukkelis.tilit;
 
 import android.content.ClipData;
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.content.ClipboardManager;
@@ -101,7 +103,8 @@ public class MainActivity extends AppCompatActivity {
         // Read existing items into the list from a file if there are any
         readItems();
         // Assign an adapter between the list and the UI element ListView
-        itemsAdapter = new ArrayAdapter<AccountInfo>(this, android.R.layout.simple_list_item_2, android.R.id.text1, items) {
+        itemsAdapter = new ArrayAdapter<AccountInfo>(this, android.R.layout.simple_list_item_2,
+                                                    android.R.id.text1, items) {
 
             @Override
             public View getView(int position, View convertView, ViewGroup parent) {
@@ -118,6 +121,7 @@ public class MainActivity extends AppCompatActivity {
             }
         };
         lvItems.setAdapter(itemsAdapter);
+        lvItems.requestFocus();
 
     }
 
@@ -146,6 +150,7 @@ public class MainActivity extends AppCompatActivity {
         etNewAccount.setText(savedInstanceState.getString("Account"));
     }
 
+    // Define how the input data is saved as an AccountInfo entry on button press
     public void onAddItem(View v) {
         EditText etNewName = (EditText) findViewById(R.id.etNewName);
         EditText etNewAccount = (EditText) findViewById(R.id.etNewAccount);
@@ -157,28 +162,45 @@ public class MainActivity extends AppCompatActivity {
         writeItems();
     }
 
+    // Action bar menu creation, using custom xml that defines a help button
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.help_menu, menu);
         return true;
     }
 
+    // The handling of the action bar item clicks are done here
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
+
         int id = item.getItemId();
 
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
+        if (id == R.id.help) {
+            showHelp();
             return true;
         }
 
         return super.onOptionsItemSelected(item);
     }
 
+    // This method constructs a simple dialog window to be shown
+    // when you click a help button on action bar
+    private void showHelp() {
+        AlertDialog alertDialog = new AlertDialog.Builder(MainActivity.this).create();
+        alertDialog.setTitle("Help");
+        alertDialog.setMessage("Long click on a list entry to either copy the account number or " +
+                "delete the whole entry. A new account number must be given in the IBAN format.");
+        alertDialog.setButton(AlertDialog.BUTTON_NEUTRAL, "Dismiss",
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                });
+        alertDialog.show();
+    }
+
+    // Define a context menu when you long click a list entry
     @Override
     public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
         super.onCreateContextMenu(menu, v, menuInfo);
@@ -188,24 +210,29 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // Handle context menu item clicks.
     @Override
     public boolean onContextItemSelected(MenuItem item) {
         AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo) item.getMenuInfo();
         switch(item.getItemId()) {
+            // Copy the account number from the list to the clipboard
             case R.id.copy:
                 ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
                 ClipData clip = ClipData.newPlainText("account number", items.get(info.position).account_num);
                 clipboard.setPrimaryClip(clip);
                 return true;
+            // Delete the entry from the list
             case R.id.delete:
                 items.remove(info.position);
                 itemsAdapter.notifyDataSetChanged();
+                writeItems();
                 return true;
             default:
                 return super.onContextItemSelected(item);
         }
     }
 
+    // Read a file that contains the list items
     private void readItems() {
         File filesDir = getFilesDir();
         File todoFile = new File(filesDir, "todo.txt");
@@ -220,6 +247,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // Write the list items to a file to preserve when the app shuts down
     private void writeItems() {
         File filesDir = getFilesDir();
         File todoFile = new File(filesDir, "todo.txt");
@@ -235,6 +263,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // Check if a EditText-field is empty and enable/disable the add entry button according to it
     private void checkIfEmpty(){
         Button b = (Button) findViewById(R.id.btnAddItem);
         Boolean s1 = editName.getText().toString().trim().isEmpty();
@@ -258,6 +287,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // Check if the new account number EditText -field is valid or not (in IBAN format)
     private void checkIfValid(Editable s){
         Button b = (Button) findViewById(R.id.btnAddItem);
         String acco = s.toString().trim();
@@ -271,40 +301,5 @@ public class MainActivity extends AppCompatActivity {
             editAccount.setError("Account number should be in IBAN format");
         }
 
-        /*String restString;
-        String checkDigits;
-        int countryDigits;
-
-
-        long restDigits;
-
-        if(acco.length() > 14){
-
-            countryDigits = ((acco.charAt(0) - 55) * 10) + (acco.charAt(1) - 55);
-            checkDigits = Integer.toString(countryDigits) + acco.substring(2, 4);
-            restString = acco.substring(4) + checkDigits;
-            restDigits = Long.parseLong(restString.substring(0, 9)) % 97;
-            int i;
-            for(i = 9; ((i - 9 + 1) * 7) + 9 < restString.length(); i += 7){
-                restDigits = ((restDigits * 10000000) + Long.parseLong(restString.substring(i, i + 7))) % 97;
-            }
-            int j = restString.length() - i;
-            if (j > 0){
-                restDigits = ((restDigits * 10 * j) + Long.parseLong(restString.substring(i))) % 97;
-            }
-            if (restDigits == 1){
-                editAccount.setError(null);
-                b.setEnabled(true);
-            }
-            else{
-                b.setEnabled(false);
-                editAccount.setError("Account number should be in IBAN format");
-            }
-        }
-        else if (acco.length() > 0){
-            b.setEnabled(false);
-            editAccount.setError("Account number should be in IBAN format");
-        }
-        */
     }
 }
