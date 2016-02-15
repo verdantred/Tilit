@@ -3,31 +3,32 @@
 package mukkelis.tilit;
 
 import android.content.ClipData;
+import android.content.Context;
 import android.content.DialogInterface;
+import android.graphics.Rect;
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.content.ClipboardManager;
 import android.text.Editable;
+import android.text.InputFilter;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.ContextMenu;
 import android.view.MenuInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
-
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.validator.routines.checkdigit.IBANCheckDigit;
 
 
 // The whole application runs in one activity
@@ -36,8 +37,8 @@ public class MainActivity extends AppCompatActivity {
 
     private ArrayAdapter<AccountInfo> itemsAdapter; // Adapter that operates the listView
     private ListView lvItems;                       // The list of accounts UI element
-    private Accounts myAccounts;
-    private Button addButton;
+    private Accounts myAccounts;                    // Datastructure for handling accounts
+    private Button   addButton;                     // UI element for the add entry button
     private EditText editName;                      // UI element for a new account name
     private EditText editAccount;                   // UI element for a new account number
 
@@ -52,7 +53,10 @@ public class MainActivity extends AppCompatActivity {
 
         public void onTextChanged(CharSequence s, int start, int before,
                                   int count) {
-            if (myAccounts.checkIfEmpty()){
+            // Disable new account button if either of the field is empty
+            if (myAccounts.checkIfEmpty(s.toString()) || myAccounts.checkIfEmpty(
+                    editAccount.getText().toString()) || myAccounts.checkIfValidAcc(
+                    editAccount.getText().toString()) != AccountFieldState.Valid){
                 addButton.setEnabled(false);
             }
             else {
@@ -61,11 +65,13 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-    // Same thing but for the account number, here the IBAN-validity of the number string is also checked
+    // Same thing but for the account number, here the IBAN-validity of the account number string
+    // is also checked
     private TextWatcher accountWatcher = new TextWatcher() {
 
         public void afterTextChanged(Editable s) {
-            AccountFieldState account = myAccounts.checkIfValid(s);
+            // Disable new account button and show error message if field is not valid
+            AccountFieldState account = myAccounts.checkIfValidAcc(s.toString());
             switch (account){
                 case Valid:
                     addButton.setEnabled(true);
@@ -89,8 +95,10 @@ public class MainActivity extends AppCompatActivity {
 
         public void onTextChanged(CharSequence s, int start, int before,
                                   int count) {
-            if (myAccounts.checkIfEmpty()){
+            // Disable button if either of the field is empty
+            if (myAccounts.checkIfEmpty(s.toString()) || myAccounts.checkIfEmpty(editName.getText().toString())){
                 addButton.setEnabled(false);
+                editAccount.setError(null);
             }
             else {
                 addButton.setEnabled(true);
@@ -98,9 +106,13 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+    // This is run when the activity is created
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // Loads the state that the activity was in before it was put to background
         super.onCreate(savedInstanceState);
+
+        // Sets up the basic Android UI elements
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -110,10 +122,10 @@ public class MainActivity extends AppCompatActivity {
 
         // Assign the watchers
         editName.addTextChangedListener(nameWatcher);
+        editAccount.setFilters(new InputFilter[]{new InputFilter.AllCaps(), new InputFilter.LengthFilter(34)});
         editAccount.addTextChangedListener(accountWatcher);
 
-        myAccounts = new Accounts(editName,
-                editAccount, getFilesDir());
+        myAccounts = new Accounts(getFilesDir());
 
 
         // Disable new account button
@@ -148,6 +160,25 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+
+    // Clear focus from current EditText when clicked something else
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent event) {
+        if (event.getAction() == MotionEvent.ACTION_DOWN) {
+            View v = getCurrentFocus();
+            if ( v instanceof EditText) {
+                Rect outRect = new Rect();
+                v.getGlobalVisibleRect(outRect);
+                if (!outRect.contains((int)event.getRawX(), (int)event.getRawY())) {
+                    v.clearFocus();
+                    InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                    imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
+                }
+            }
+        }
+        return super.dispatchTouchEvent( event );
+    }
+
     // Saving the EditText fields when app loses focus
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
@@ -155,8 +186,8 @@ public class MainActivity extends AppCompatActivity {
         // Save UI state changes to the savedInstanceState.
         // This bundle will be passed to onCreate if the process is
         // killed and restarted.
-        savedInstanceState.putString("Name", editName.toString());
-        savedInstanceState.putString("Account", editAccount.toString());
+        savedInstanceState.putString("Name", editName.getText().toString());
+        savedInstanceState.putString("Account", editAccount.getText().toString());
     }
 
     // Loading the saved texts when app regains focus
@@ -173,7 +204,8 @@ public class MainActivity extends AppCompatActivity {
     public void onAddItem(View v) {
         String nameText = editName.getText().toString();
         String accountText = editAccount.getText().toString();
-        itemsAdapter.add(new AccountInfo(nameText, accountText));
+        myAccounts.add(new AccountInfo(nameText, accountText));
+        itemsAdapter.notifyDataSetChanged();
         editName.setText("");
         editAccount.setText("");
         myAccounts.writeItems();
@@ -240,7 +272,7 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             // Delete the entry from the list
             case R.id.delete:
-                myAccounts.getItems().remove(info.position);
+                myAccounts.remove(info.position);
                 itemsAdapter.notifyDataSetChanged();
                 myAccounts.writeItems();
                 return true;
