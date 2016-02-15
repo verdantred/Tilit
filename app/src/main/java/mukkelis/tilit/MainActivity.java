@@ -290,7 +290,7 @@ public class MainActivity extends AppCompatActivity {
     // Check if the new account number EditText -field is valid or not (in IBAN format)
     private void checkIfValid(Editable s){
         Button b = (Button) findViewById(R.id.btnAddItem);
-        String acco = s.toString().trim();
+        String acco = s.toString().replaceAll("\\s", "");
 
         if (checker.isValid(acco)){
             editAccount.setError(null);
