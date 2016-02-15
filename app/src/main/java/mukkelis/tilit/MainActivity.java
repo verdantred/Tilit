@@ -1,4 +1,4 @@
-// TIlit-application main logic resides here
+// TIlit-application UI logic and other UI related stuff resides here
 
 package mukkelis.tilit;
 

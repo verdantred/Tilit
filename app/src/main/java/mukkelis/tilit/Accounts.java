@@ -1,3 +1,5 @@
+// Everything related to the AccountInfo datastructure and its item validation resides here
+
 package mukkelis.tilit;
 
 import android.text.Editable;
